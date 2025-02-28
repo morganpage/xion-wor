@@ -1,11 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, CustomQuery, Querier, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
-};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 
-use crate::msg::{ExecuteMsg, GetCountResponse, QueryMsg};
+use crate::msg::ExecuteMsg;
 
 /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
 /// for working with this.
@@ -27,20 +25,20 @@ impl CwTemplateContract {
         .into())
     }
 
-    /// Get Count
-    pub fn count<Q, T, CQ>(&self, querier: &Q) -> StdResult<GetCountResponse>
-    where
-        Q: Querier,
-        T: Into<String>,
-        CQ: CustomQuery,
-    {
-        let msg = QueryMsg::GetCount {};
-        let query = WasmQuery::Smart {
-            contract_addr: self.addr().into(),
-            msg: to_json_binary(&msg)?,
-        }
-        .into();
-        let res: GetCountResponse = QuerierWrapper::<CQ>::new(querier).query(&query)?;
-        Ok(res)
-    }
+    // Get Count
+    // pub fn count<Q, T, CQ>(&self, querier: &Q) -> StdResult<GetCountResponse>
+    // where
+    //     Q: Querier,
+    //     T: Into<String>,
+    //     CQ: CustomQuery,
+    // {
+    //     let msg = QueryMsg::GetCount {};
+    //     let query = WasmQuery::Smart {
+    //         contract_addr: self.addr().into(),
+    //         msg: to_json_binary(&msg)?,
+    //     }
+    //     .into();
+    //     let res: GetCountResponse = QuerierWrapper::<CQ>::new(querier).query(&query)?;
+    //     Ok(res)
+    // }
 }

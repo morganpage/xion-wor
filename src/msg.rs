@@ -7,17 +7,12 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Increment {},
     ClaimStreak {},
-    Reset { count: i32 },
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    // GetCount returns the current count as a json-encoded number
-    #[returns(GetCountResponse)]
-    GetCount {},
     // GetStreak returns the current streak for the given address
     #[returns(GetStreakResponse)]
     GetStreak { address: String },
