@@ -39,38 +39,77 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::ClaimStreak {} => execute::claim_streak(deps, info),
+        ExecuteMsg::ClaimStreak {} => execute::claim_streak(deps, env, info),
     }
 }
 
 pub mod execute {
-    use crate::state::STREAKS;
+    use crate::state::{LAST_CLAIMED, STREAKS};
 
     use super::*;
 
-    pub fn claim_streak(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    pub fn claim_streak(
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+    ) -> Result<Response, ContractError> {
         let owner = info.sender.clone();
-        if STREAKS.has(deps.storage, owner.clone()) {
-            // update player streak
-            STREAKS.update(
-                deps.storage,
-                owner.clone(),
-                |streak| -> Result<_, ContractError> {
-                    match streak {
-                        Some(count) => Ok(count + 1),
-                        None => Ok(1),
+        //Check LAST_CLAIMED if it is zero or more than 48 hours, reset streak to 1
+        let last_claimed = LAST_CLAIMED.may_load(deps.storage, owner.clone())?;
+        match last_claimed {
+            Some(last_claimed) => {
+                let seconds: u64 = env.block.time.seconds() - last_claimed;
+                if seconds > 172800 {
+                    STREAKS.save(deps.storage, owner.clone(), &1)?;
+                } else {
+                    //Throw error if player tries to claim streak before 24 hours have passed
+
+                    if seconds < 86400 {
+                        return Err(ContractError::ClaimTooSoon {});
                     }
-                },
-            )?;
-        } else {
-            // create player streak
-            STREAKS.save(deps.storage, owner.clone(), &1)?;
+
+                    STREAKS.update(
+                        deps.storage,
+                        owner.clone(),
+                        |streak| -> Result<_, ContractError> {
+                            match streak {
+                                Some(count) => Ok(count + 1),
+                                None => Ok(1),
+                            }
+                        },
+                    )?;
+                }
+            }
+            None => {
+                STREAKS.save(deps.storage, owner.clone(), &1)?;
+            }
         }
+        // if LAST_CLAIMED.has(deps.storage, owner.clone()) {
+        // }
+
+        // if STREAKS.has(deps.storage, owner.clone()) {
+        //     // update player streak
+        //     STREAKS.update(
+        //         deps.storage,
+        //         owner.clone(),
+        //         |streak| -> Result<_, ContractError> {
+        //             match streak {
+        //                 Some(count) => Ok(count + 1),
+        //                 None => Ok(1),
+        //             }
+        //         },
+        //     )?;
+        // } else {
+        //     // create player streak
+        //     STREAKS.save(deps.storage, owner.clone(), &1)?;
+        // }
+        // update last claimed time
+        LAST_CLAIMED.save(deps.storage, owner.clone(), &env.block.time.seconds())?;
 
         Ok(Response::new().add_attribute("action", "claim_streak"))
     }
@@ -101,7 +140,8 @@ mod tests {
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_json};
+    use cosmwasm_std::{coins, from_json, Addr};
+    use cw_multi_test::{App, Executor};
 
     #[test]
     fn claim_streak() {
@@ -153,6 +193,58 @@ mod tests {
         .unwrap();
         let value: GetStreakResponse = from_json(&res).unwrap();
         assert_eq!(1, value.streak);
+    }
+
+    #[test]
+    fn claim_streak_too_soon() {
+        let mut deps = mock_dependencies();
+        let info1 = mock_info("anyone1", &coins(2, "token"));
+        let msg_claim_streak = ExecuteMsg::ClaimStreak {};
+        let _res = execute(
+            deps.as_mut(),
+            mock_env(),
+            info1.clone(),
+            msg_claim_streak.clone(),
+        )
+        .unwrap();
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            info1.clone(),
+            msg_claim_streak.clone(),
+        );
+        match res {
+            Err(ContractError::ClaimTooSoon {}) => {}
+            _ => panic!("Claiming too soon"),
+        }
+    }
+
+    #[test]
+    fn claim_streak_after_24hours() {
+        let mut deps = mock_dependencies();
+        let info1 = mock_info("anyone1", &coins(2, "token"));
+        let msg_claim_streak = ExecuteMsg::ClaimStreak {};
+        let _res = execute(
+            deps.as_mut(),
+            mock_env(),
+            info1.clone(),
+            msg_claim_streak.clone(),
+        )
+        .unwrap();
+        let mut env = mock_env();
+        env.block.time = env.block.time.plus_seconds(86400);
+        let _res = execute(deps.as_mut(), env, info1.clone(), msg_claim_streak.clone()).unwrap();
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetStreak {
+                address: "anyone1".to_string(),
+            },
+        )
+        .unwrap();
+
+        let value: GetStreakResponse = from_json(&res).unwrap();
+        assert_eq!(2, value.streak);
     }
 
     #[test]

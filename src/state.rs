@@ -11,4 +11,4 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const STREAKS: Map<Addr, u32> = Map::new("streaks");
-pub const LAST_CLAIMED: Map<Addr, u32> = Map::new("last_claimed");
+pub const LAST_CLAIMED: Map<Addr, u64> = Map::new("last_claimed");
