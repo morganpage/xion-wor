@@ -5,7 +5,6 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-//use crate::state::{Config, State, CONFIG, STATE, STREAKS};
 use crate::state::{Config, CONFIG, STREAKS};
 
 // version info for migration info
@@ -19,21 +18,14 @@ pub fn instantiate(
     info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    // let state = State {
-    //     count: msg.count,
-    //     owner: info.sender.clone(),
-    // };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    //    STATE.save(deps.storage, &state)?;
     let config = Config {
         admin: info.sender.clone(),
     };
     CONFIG.save(deps.storage, &config)?;
-    Ok(
-        Response::new()
-            .add_attribute("method", "instantiate")
-            .add_attribute("admin", info.sender), //  .add_attribute("count", msg.count.to_string())
-    )
+    Ok(Response::new()
+        .add_attribute("method", "instantiate")
+        .add_attribute("admin", info.sender))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -68,11 +60,9 @@ pub mod execute {
                     STREAKS.save(deps.storage, owner.clone(), &1)?;
                 } else {
                     //Throw error if player tries to claim streak before 24 hours have passed
-
                     if seconds < 86400 {
                         return Err(ContractError::ClaimTooSoon {});
                     }
-
                     STREAKS.update(
                         deps.storage,
                         owner.clone(),
@@ -89,28 +79,8 @@ pub mod execute {
                 STREAKS.save(deps.storage, owner.clone(), &1)?;
             }
         }
-        // if LAST_CLAIMED.has(deps.storage, owner.clone()) {
-        // }
-
-        // if STREAKS.has(deps.storage, owner.clone()) {
-        //     // update player streak
-        //     STREAKS.update(
-        //         deps.storage,
-        //         owner.clone(),
-        //         |streak| -> Result<_, ContractError> {
-        //             match streak {
-        //                 Some(count) => Ok(count + 1),
-        //                 None => Ok(1),
-        //             }
-        //         },
-        //     )?;
-        // } else {
-        //     // create player streak
-        //     STREAKS.save(deps.storage, owner.clone(), &1)?;
-        // }
         // update last claimed time
         LAST_CLAIMED.save(deps.storage, owner.clone(), &env.block.time.seconds())?;
-
         Ok(Response::new().add_attribute("action", "claim_streak"))
     }
 }
@@ -251,17 +221,21 @@ mod tests {
 
     fn proper_initialization() {
         let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg { count: 17 };
+        let msg = InstantiateMsg {};
         let info = mock_info("creator", &coins(1000, "earth"));
-
         // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
-
         // it worked, let's query the state
-        // let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        // let value: GetCountResponse = from_json(&res).unwrap();
-        // assert_eq!(0, value.count);
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetStreak {
+                address: "creator".to_string(),
+            },
+        )
+        .unwrap();
+        let value: GetStreakResponse = from_json(&res).unwrap();
+        assert_eq!(0, value.streak);
     }
 }
