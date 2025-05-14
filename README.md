@@ -1,6 +1,7 @@
 # **XION World of Rogues Game Smart Contract**
 
-## Streaks
+## Streak System
+
 
 
 ## Deployment
@@ -22,29 +23,29 @@ https://faucet.xion.burnt.com/
 
 Check here:
 
-https://explorer.burnt.com/xion-testnet-1/account/xion1gn6m2ff4yzqgxlk7sxrx03g2zqfxgdr22d9yp6
+https://explorer.burnt.com/xion-testnet-2/account/xion1gn6m2ff4yzqgxlk7sxrx03g2zqfxgdr22d9yp6
 ```
-WALLET="xion1gn6m2ff4yzqgxlk7sxrx03g2zqfxgdr22d9yp6"
+WALLET=xion1gn6m2ff4yzqgxlk7sxrx03g2zqfxgdr22d9yp6
 ```
 ```
 RES=$(xiond tx wasm store ./artifacts/xion_wor.wasm \
-      --chain-id xion-testnet-1 \
+      --chain-id xion-testnet-2 \
       --gas-adjustment 1.3 \
       --gas-prices 0.1uxion \
       --gas auto \
       -y --output json \
-      --node https://rpc.xion-testnet-1.burnt.com:443 \
+      --node https://rpc.xion-testnet-2.burnt.com:443 \
       --from $WALLET)
 ```
 ```
 echo $RES
 ```
 ```
-TXHASH=D5A2EAEF5A94F1EB86E96F4084F46F17CEFAF4D8103EF29DDC297F75C1F705FE
+TXHASH=82755E187F29B35DA56EC6EBB1A26029663EB67772ECE792C420094080394F56
 ```
 ```
 CODE_ID=$(xiond query tx $TXHASH \
-  --node https://rpc.xion-testnet-1.burnt.com:443 \
+  --node https://rpc.xion-testnet-2.burnt.com:443 \
   --output json | jq -r '.events[-1].attributes[1].value')
 ```
 ```
@@ -58,29 +59,27 @@ xiond tx wasm instantiate $CODE_ID "{}" \
   --gas auto \
   --gas-adjustment 1.3 \
   -y --no-admin \
-  --chain-id xion-testnet-1 \
-  --node https://rpc.xion-testnet-1.burnt.com:443
+  --chain-id xion-testnet-2 \
+  --node https://rpc.xion-testnet-2.burnt.com:443
 ```
 ```
-TXHASH=7093FDD3106173EAF40EB67DCE14B48B36E61276B9449695F3F9C438121937CE
+TXHASH=FF9B8A0209090BC66A51D134A35BB101407B128C20BEB606FB6E5E19E009E783
 ```
 ```
 CONTRACT=$(xiond query tx $TXHASH \
-  --node https://rpc.xion-testnet-1.burnt.com:443 \
+  --node https://rpc.xion-testnet-2.burnt.com:443 \
   --output json | jq -r '.events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
 ```
 ```
 echo $CONTRACT
 ```
 ```
-xiond query wasm contract-state smart $CONTRACT "$QUERY" --output json --node https://rpc.xion-testnet-1.burnt.com:443
-```
-```
 QUERY='{"get_streak":{ "address": "xion1gn6m2ff4yzqgxlk7sxrx03g2zqfxgdr22d9yp6"}}'
 ```
 ```
-xiond query wasm contract-state smart $CONTRACT "$QUERY" --output json --node https://rpc.xion-testnet-1.burnt.com:443
+xiond query wasm contract-state smart $CONTRACT "$QUERY" --output json --node https://rpc.xion-testnet-2.burnt.com:443
 ```
+
 ```
 CLAIM_STREAK='{"claim_streak": {}}'
 ```
@@ -91,8 +90,8 @@ xiond tx wasm execute $CONTRACT "$CLAIM_STREAK" \
   --gas auto \
   --gas-adjustment 1.3 \
   -y \
-  --node https://rpc.xion-testnet-1.burnt.com:443 \
-  --chain-id xion-testnet-1
+  --node https://rpc.xion-testnet-2.burnt.com:443 \
+  --chain-id xion-testnet-2
 ```
 
 Setup treasury contract here:

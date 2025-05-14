@@ -20,4 +20,5 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct GetStreakResponse {
     pub streak: u32,
+    pub seconds_since_last_claimed: u64,
 }

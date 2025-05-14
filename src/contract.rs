@@ -5,7 +5,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Config, CONFIG, STREAKS};
+use crate::state::{Config, CONFIG, LAST_CLAIMED, STREAKS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:increment";
@@ -86,9 +86,9 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetStreak { address } => to_json_binary(&query::streak(deps, address)?),
+        QueryMsg::GetStreak { address } => to_json_binary(&query::streak(deps, env, address)?),
     }
 }
 
@@ -97,10 +97,20 @@ pub mod query {
 
     use super::*;
 
-    pub fn streak(deps: Deps, address: String) -> StdResult<GetStreakResponse> {
+    pub fn streak(deps: Deps, env: Env, address: String) -> StdResult<GetStreakResponse> {
         let addr = deps.api.addr_validate(&address)?;
-        let streak = STREAKS.may_load(deps.storage, addr)?.unwrap_or(0);
-        Ok(GetStreakResponse { streak })
+        let streak = STREAKS.may_load(deps.storage, addr.clone())?.unwrap_or(0);
+        let last_claimed = LAST_CLAIMED
+            .may_load(deps.storage, addr.clone())?
+            .unwrap_or(0);
+        let mut seconds: u64 = 0;
+        if (env.block.time.seconds() > last_claimed) && (last_claimed > 0) {
+            seconds = env.block.time.seconds() - last_claimed;
+        }
+        Ok(GetStreakResponse {
+            streak,
+            seconds_since_last_claimed: seconds,
+        })
     }
 }
 
